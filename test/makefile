@@ -1,6 +1,7 @@
 progname := firmware
 progdir := res
-files := main startup
+files := main plic startup
+#_k1921vg015
 
 HSE_CLOCK := 16000000
 
@@ -40,7 +41,7 @@ CFLAGS += -I$(libdir)/Include
 CFLAGS += -I/usr/lib/picolibc/riscv64-unknown-elf/include
 ASMFLAGS = $(COMMON) -I$(libdir)/Include -I/usr/lib/picolibc/riscv64-unknown-elf/include
 
-LDFLAGS = $(COMMON) -march=$(ARCH)_zicsr -mabi=ilp32 -mcmodel=medany -nostdlib -L ../lib/ldscripts -T k1921vg015_flash.ld
+LDFLAGS = $(COMMON) -nostdlib -L ../lib/ldscripts -T k1921vg015_flash.ld
 #-flto=auto
 LDFLAGS += $(GCCPATH) -lc
 #LDFLAGS += /usr/lib/picolibc/riscv64-unknown-elf/lib/rv32im/ilp32/libc.a
@@ -70,12 +71,15 @@ $(builddir)/%.o: $(srcdir)/%.S
 	mkdir -p $(builddir)
 	$(CC) -c $(ASMFLAGS) $< -o $@
 	
-#$(builddir)/startup.o: ../lib/Source/startup_k1921vg015.S
-#	mkdir -p $(builddir)
-#	$(CC) -c $(ASMFLAGS) $< -o $@
-$(builddir)/sys_init.o: ../lib/Source/sys_init.c
+$(builddir)/startup__k1921vg015.o: ../lib/Source/startup_k1921vg015.S
+	mkdir -p $(builddir)
+	$(CC) -c $(ASMFLAGS) $< -o $@
+$(builddir)/%.o: $(libdir)/Source/%.c
 	mkdir -p $(builddir)
 	$(CC) -c $(CFLAGS) $< -o $@
+#$(builddir)/sys_init.o: ../lib/Source/sys_init.c
+#	mkdir -p $(builddir)
+#	$(CC) -c $(CFLAGS) $< -o $@
 
 clean:
 	rm -rf $(progdir)
@@ -87,6 +91,9 @@ prog: $(frmname).bin
 	scp $(frmname).bin virt:/home/user/prog/vg015/rem/firmware.bin
 	ssh virt "cd /home/user/prog/vg015/rem ; "\
 	"../xpack-openocd-k1921vk-0.12.0-k1921vk/bin/openocd -f ft4232.cfg -f k1921vg015.cfg -c 'init' -c 'reset halt' -c 'program firmware.bin 0x80000000 verify' -c 'reset run' -c 'exit'"
+reset:
+	ssh virt "cd /home/user/prog/vg015/rem ; "\
+	"../xpack-openocd-k1921vk-0.12.0-k1921vk/bin/openocd -f ft4232.cfg -f k1921vg015.cfg -c 'init' -c 'reset halt' -c 'reset run' -c 'exit'"
 
 #/home/user/prog/vg015/xpack-openocd-k1921vk-0.12.0-k1921vk/bin/openocd -f ../openocd/scripts/interface/ftdi/ft4232.cfg -f ../../niiet_riscv_sdk/tools/openocd/scripts/target/k1921vg015.cfg -c "init" -c "reset halt" -c "program firmware.bin 0x80000000 verify" -c "reset run" -c "exit"
 	

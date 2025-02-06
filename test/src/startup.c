@@ -1,6 +1,7 @@
 #include <stdint.h>
 
-void trap_entry();
+void trap_handler(void);
+void trap_entry(void);
 int main(int argc, char **argv);
 extern uint8_t __bss_start, __bss_end;
 extern uint8_t __data_target_start, __data_target_end, __data_source_start;
@@ -28,10 +29,16 @@ extern uint8_t __sdata_target_start, __sdata_target_end, __sdata_source_start;
   }while(0)
 
   
-__attribute__((section(".startup.entry"))) __attribute__((noreturn)) void _start(){
+__attribute__((section(".startup.entry"))) __attribute__((noreturn)) __attribute__((naked))
+void _start(){
   uint32_t temp;
   write_csr(mstatus, 0);
-  asm volatile("la gp, __global_pointer$");
+  asm volatile(
+    ".option push		\n"
+    ".option norelax	\n"
+    "la gp, __global_pointer$ \n"
+    ".option pop	\n"
+  );
   write_csr(mtvec, trap_entry);
   write_csr(mie, 0);
   write_csr(mip, 0);
@@ -58,7 +65,10 @@ __attribute__((section(".startup.entry"))) __attribute__((noreturn)) void _start
   while(1){}
 }
 
-
-__attribute__((weak))void trap_entry(){
+__attribute__((weak))void trap_handler(void){
   while(1){}
+}
+
+__attribute__((weak)) __attribute__((interrupt))void trap_entry(void){
+  trap_handler();
 }
