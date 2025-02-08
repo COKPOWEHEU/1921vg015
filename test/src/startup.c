@@ -6,6 +6,7 @@ int main(int argc, char **argv);
 extern uint8_t __bss_start, __bss_end;
 extern uint8_t __data_target_start, __data_target_end, __data_source_start;
 extern uint8_t __sdata_target_start, __sdata_target_end, __sdata_source_start;
+extern uint8_t __STACK_END__;
 
 #define _TOSTR(s) #s
 #define TOSTR(s) _TOSTR(s)
@@ -36,6 +37,8 @@ void _start(){
   asm volatile(
     ".option push		\n"
     ".option norelax	\n"
+    //"lui gp, %hi(__global_pointer$)\n"
+    //"addi gp, gp, %lo(__global_pointer$)\n"
     "la gp, __global_pointer$ \n"
     ".option pop	\n"
   );
@@ -44,6 +47,8 @@ void _start(){
   write_csr(mip, 0);
   set_csr(mstatus, (0b01<<13)); //FS=0b01, FPU status: initial
   asm volatile(
+    //"lui sp, %hi(__STACK_END__)\n"
+    //"addi sp, sp, %lo(__STACK_END__)\n"
     "la sp, __STACK_END__ \n"
     "mv tp, sp            \n"
     "csrw mscratch, sp    \n"
@@ -65,9 +70,6 @@ void _start(){
   while(1){}
 }
 
-__attribute__((weak))void trap_handler(void){
-  while(1){}
-}
 
 __attribute__((weak)) __attribute__((interrupt))void trap_entry(void){
   trap_handler();

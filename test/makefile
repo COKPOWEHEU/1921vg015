@@ -1,6 +1,6 @@
 progname := firmware
 progdir := res
-files := main plic startup
+files := main plic startup strlib system_k1921vg015
 #_k1921vg015
 
 HSE_CLOCK := 16000000
@@ -39,6 +39,7 @@ CFLAGS = $(COMMON)
 CFLAGS += -Wall -Os -g -DF_HSE=$(HSE_CLOCK)
 CFLAGS += -I$(libdir)/Include
 CFLAGS += -I/usr/lib/picolibc/riscv64-unknown-elf/include
+CFLAGS += -DHSECLK_VAL=16000000 -DSYSCLK_PLL
 ASMFLAGS = $(COMMON) -I$(libdir)/Include -I/usr/lib/picolibc/riscv64-unknown-elf/include
 
 LDFLAGS = $(COMMON) -nostdlib -L ../lib/ldscripts -T k1921vg015_flash.ld
@@ -71,7 +72,7 @@ $(builddir)/%.o: $(srcdir)/%.S
 	mkdir -p $(builddir)
 	$(CC) -c $(ASMFLAGS) $< -o $@
 	
-$(builddir)/startup__k1921vg015.o: ../lib/Source/startup_k1921vg015.S
+$(builddir)/startup_k1921vg015.o: ../lib/Source/startup_k1921vg015.S
 	mkdir -p $(builddir)
 	$(CC) -c $(ASMFLAGS) $< -o $@
 $(builddir)/%.o: $(libdir)/Source/%.c
@@ -87,13 +88,19 @@ clean:
 size: $(frmname).elf
 	$(SIZE) $(frmname).elf
 	
+virt = virt2
 prog: $(frmname).bin
-	scp $(frmname).bin virt:/home/user/prog/vg015/rem/firmware.bin
-	ssh virt "cd /home/user/prog/vg015/rem ; "\
+	scp $(frmname).bin $(virt):/home/user/prog/vg015/rem/firmware.bin
+	ssh $(virt) "cd /home/user/prog/vg015/rem ; "\
 	"../xpack-openocd-k1921vk-0.12.0-k1921vk/bin/openocd -f ft4232.cfg -f k1921vg015.cfg -c 'init' -c 'reset halt' -c 'program firmware.bin 0x80000000 verify' -c 'reset run' -c 'exit'"
 reset:
-	ssh virt "cd /home/user/prog/vg015/rem ; "\
+	ssh $(virt) "cd /home/user/prog/vg015/rem ; "\
 	"../xpack-openocd-k1921vk-0.12.0-k1921vk/bin/openocd -f ft4232.cfg -f k1921vg015.cfg -c 'init' -c 'reset halt' -c 'reset run' -c 'exit'"
+unbrick:
+	echo "Connect SERVEN to VCC, reset controller and press Enter"
+	read
+	ssh $(virt) "cd /home/user/prog/vg015/rem ; "\
+	"../xpack-openocd-k1921vk-0.12.0-k1921vk/bin/openocd -f ft4232.cfg -f k1921vg015.cfg -c 'init' -c 'reset halt' -c 'mww 0x3000F104 0x00000100' -c 'mdw 0x3000F104' -c 'reset run' -c 'exit'"
 
 #/home/user/prog/vg015/xpack-openocd-k1921vk-0.12.0-k1921vk/bin/openocd -f ../openocd/scripts/interface/ftdi/ft4232.cfg -f ../../niiet_riscv_sdk/tools/openocd/scripts/target/k1921vg015.cfg -c "init" -c "reset halt" -c "program firmware.bin 0x80000000 verify" -c "reset run" -c "exit"
 	
